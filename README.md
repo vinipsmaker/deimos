@@ -1,7 +1,7 @@
-node-jsonrpc
+node-jsonrpc2
 ============
 
-This module makes it easy to process and respond to JSON-RPC (v1.0) messages.
+This module makes it easy to process and respond to JSON-RPC (v1.0 and v2.0) messages.
 
 JSON-RPC is an extremely simple format to communicate between the client (for example browser) and the host (server).
 It's an easy way to run functions server side by providing the server the function name that needs to be executed and the params alongside with it.
@@ -23,30 +23,29 @@ You can install this package through npm
 
     npm install jsonrpc
     
-After this you can require the RPCHandler with
+After this you can require the RpcHandler with
 
-    var rpc = require("jsonrpc").RPCHandler;
+    var rpc = require("jsonrpc2").RpcHandler;
 
 
 Server side node.JS
 -------------------
 
-Main handler for the RPC request is jsonrpc.RPCHandler - this is a constructor function that handles the RPC request all the way to the final output. You don't have to call response.end() for example, this is done by the handler object.
+Main handler for the RPC request is jsonrpc.RpcHandler - this is a constructor function that handles the RPC request all the way to the final output. You don't have to call response.end() for example, this is done by the handler object.
 
-    var RPCHandler = require("jsonrpc").RPCHandler;
-    new RPCHandler(request, response, RPCMethods, debug=false);
+    var RpcHandler = require("jsonrpc2").RpcHandler;
+    new RpcHandler(request, response, rpcMethods, debug=false);
     
 RPChandler construtor takes the following parameters
     
  - request: http.ServerRequest object
- - rsponse: http.ServerResponse object
- - RPCMethods: object that holds all the available methods
-       RPCMethods: {
+ - response: http.ServerResponse object
+ - rpcMethods: object that holds all the available methods
+       rpcMethods: {
            method_name: function(rpc){
                rpc.response("hello world!");
            }
        }
-   NB! method names that start with an underscore are private!
  - debug (optional) boolean value indicating if real error messages
    should be used in case of runtime errors
 
@@ -55,30 +54,27 @@ RPChandler construtor takes the following parameters
 Server accepts method calls for "check" - this method checks if the two used parameters are equal or not.
 
     var http = require("http"),
-        RPCHandler = require("jsonrpc").RPCHandler;
+        RpcHandler = require("jsonrpc").RpcHandler;
 
     // start server
     http.createServer(function (request, response) {
-        if(request.method == "POST"){
+        if(request.method == "POST") {
             // if POST request, handle RPC
-            new RPCHandler(request, response, RPCMethods, true);
-        }else{
+            new RpcHandler(request, response, rpcMethods, true);
+        } else {
             // if GET request response with greeting
             response.end("Hello world!");
         }
     }).listen(80);
 
     // Available RPC methods
-    RPCMethods = {
+    rpcMethods = {
         // NB! private method names are preceeded with an underscore
-        check: function(rpc, param1, param2){
-            if(param1!=param2)
+        check: function(rpc, params) {
+            if (params[0] != params[1])
                 rpc.error("Params doesn't match!");
             else
                 rpc.response("Params are OK!");
-        },
-        _private: function(){
-            // this method can't be accessed from the public interface
         }
     }
 
@@ -96,19 +92,19 @@ To send a RPC call to the server, the message needs to be sent as the request bo
     }
 
 If `id` value is not set, then server takes this as a notification and return nothing (output is empty).
-Parameter values are given to the RPC method as regular variables in the same order they are set in the array:
+Parameter values are given to the RPC method as an array:
 
     "params": ["val1", "val2", "val3"]
     
 Will be used as
 
-    method = function(rpc, param1, param2, param3){
-        console.log(param1); //val1
-        console.log(param2); //val2
-        console.log(param3); //val3
+    method = function(rpc, params){
+        console.log(param[0]); //val1
+        console.log(param[1]); //val2
+        console.log(param[2]); //val3
     }
 
-The first parameter passed to the method is the RPCHandler object. It has two public methods - `response` and `error`.
+The first parameter passed to the method is the RpcHandler object. It has two public methods - `response` and `error`.
 
     rpc.response("This is the normal response output");
     rpc.error("This is the output in case of error");
