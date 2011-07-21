@@ -1,4 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////
+// Copyright © 2011, Vinícius dos Santos Oliveira                         //
+//                                                                        //
 // All rights reserved.                                                   //
 //                                                                        //
 // Redistribution and use in source and binary forms, with or without     //
@@ -39,24 +41,24 @@
  * 
  * Sample usage:
  * 
- *     var http = require("http");
- *     var RpcHandler = require("jsonrpc2").RpcHandler;
+ *     var http = require('http');
+ *     var RpcHandler = require('jsonrpc2').RpcHandler;
  * 
  *     rpcMethods = {
  *         insert: function(rpc, args) {
  *             if (args[0] != args[1]) {
- *                 rpc.error("Params doesn't match!");
+ *                 rpc.error('Params doesn\'t match!');
  *             } else {
- *                 rpc.response("Params are OK!");
+ *                 rpc.response('Params are OK!');
  *             }
  *         }
  *     }
  *
  *     http.createServer(function (request, response) {
- *         if (request.method == "POST") {
+ *         if (request.method == 'POST') {
  *             new RpcHandler(request, response, rpcMethods, true);
  *         } else {
- *             response.end("Hello world!");
+ *             response.end('Hello world!');
  *         }
  *     }).listen(80);
  * 
@@ -82,17 +84,16 @@
  * to a RPC method and outputs response messages.
  */
 function RpcHandler(request, response, methods, debug) {
-    this.request = request;
-    this.response = response;
+    this.httpRequest = request;
+    this.httpResponse = response;
     this.methods = methods;
     this.debug = !!debug;
-    this.json = false;
-    
-    if (typeof this.methods == "object" &&
-        this.request && this.response) {
+
+    if (typeof this.methods == 'object' &&
+        this.httpRequest && this.httpResponse) {
         this._handleRequest();
     } else  {
-        throw new Error("Invalid params");
+        throw new Error('Invalid params');
     }
 }
 
@@ -102,13 +103,58 @@ exports.RpcHandler = RpcHandler;
 
 /**
  * RpcHandler.prototype.error = function(error) -> Boolean
- * - error (String): Error message
+ * - errorCode (int): Error code
+ * - errorMessage (String): Error message
+ * - httpStatus (int): HTTP status code for the response
+ * - data: error custom data
  * 
  * Sends an error message if error occured.
  * Returns true if a message was sent and false if blank was sent
  */
-RpcHandler.prototype.error = function(error) {
-    this._output(false, error);
+RpcHandler.prototype.error = function(errorCode, errorMessage,
+                                      httpStatus, data, forceOutput) {
+    httpStatus = typeof(httpStatus) != 'undefined' ? httpStatus : 500;
+    data = typeof(data) != 'undefined' ? data : null;
+    forceOutput = !!forceOutput;
+
+    this.httpResponse.writeHead(httpStatus, {"Content-Type": "application/json"});
+
+    if (forceOutput ||
+        ('id' in this && this.id !== null)) {
+        var errObj = {
+            "code": errorCode,
+            "message": errorMessage
+        };
+
+        if (data !== null)
+            errObj.data = data;
+
+        var resObj = {"id": this.id};
+
+        if (this.version == 2) {
+            resObj.jsonrpc = '2.0';
+            resObj.error = errObj;
+        } else {
+            resObj.error = JSON.stringify(errObj);
+        }
+
+        this.httpResponse.write(JSON.stringify(resObj));
+    }
+
+    this.httpResponse.end();
+}
+
+RpcHandler.prototype.methodNotFound = function() {
+    this.error(-32601, 'Method not found', 404);
+}
+
+RpcHandler.prototype.invalidParams = function() {
+    this.error(-32602, 'Invalid params');
+}
+
+RpcHandler.prototype.internalError = function(data) {
+    data = typeof(data) != 'undefined' ? data : null;
+    this.error(-32603, 'Internal error', 500, data);
 }
 
 /**
@@ -119,10 +165,32 @@ RpcHandler.prototype.error = function(error) {
  * Returns true if a message was sent and false if blank was sent
  */
 RpcHandler.prototype.response = function(result) {
-    this._output(result, false);    
+    this.httpResponse.writeHead(200, {"Content-Type": "application/json"});
+
+    if ('id' in this && this.id !== null) {
+        var resObj = {
+            "id": this.id,
+            "result": result
+        };
+
+        if (this.version == 2)
+            resObj.jsonrpc = '2.0';
+
+        this.httpResponse.write(JSON.stringify(resObj));
+    }
+
+    this.httpResponse.end();
 }
 
 //////////// PRIVATE METHODS ////////////
+
+RpcHandler.prototype._parseError = function() {
+    this.error(-32700, 'Parse error', 500, null, true);
+}
+
+RpcHandler.prototype._invalidRequest = function() {
+    this.error(-32600, 'Invalid Request', 400, null, true);
+}
 
 /**
  * RpcHandler._run() -> undefined
@@ -130,45 +198,31 @@ RpcHandler.prototype.response = function(result) {
  * Checks if input is correct and passes the params to an actual RPC method
  **/
 RpcHandler.prototype._run = function() {
+    if (!this.json.method)
+        this._invalidRequest();
+
     if (!this.methods)
-        return this.error("No methods", this.id);
+        this.methodNotFound();
 
-    // TODO: use a different error for each condition
-    if (!this.json.method ||
-        !(this.json.method in this.methods) ||
-        typeof this.methods[this.json.method] != "function")
-        return this.error("Invalid request method", this.id);
+    if (!(this.json.method in this.methods) ||
+        typeof this.methods[this.json.method] != 'function')
+        this.methodNotFound();
 
-    // TODO: check if params are okay
-    try {
-        this.methods[this.json].method(this, this.json.params);
-    } catch(e) {
-        rpcHandler.error(rpcHandler.debug ? e.message : "Runtime error", -1);
+    var params = null;
+
+    if ('params' in this.json) {
+        if (typeof this.json.params == 'object') {
+            params = this.json.params;
+        } else {
+            this._invalidRequest();
+            return;
+        }
     }
-}
 
-// TODO: erase this function
-/**
- * RpcHandler._output(result, error) -> Boolean
- * - result (String): response message
- * - error (String): error message
- * 
- * Creates the response, outputs it and closes the connection.
- * Returns true if a message was sent and false if blank was sent
- **/
-RpcHandler.prototype._output = function(result, error){
-    this.response.writeHead(error ? 500 : 200,
-                            {"Content-Type": "application/json"});
-    if (!("id" in this) || this.id === null) {
-        this.response.end();
-        return false;
-    } else {
-        this.response.end(JSON.stringify({
-            result: error ? null : result,
-            error: error ? error : null,
-            id: this.id
-        }));
-        return true;
+    try {
+        this.methods[this.json.method](this, this.json.params);
+    } catch(e) {
+        this.internalError(this.debug ? e.message : null);
     }
 }
 
@@ -178,12 +232,34 @@ RpcHandler.prototype._output = function(result, error){
  * Checks if request is valid and handles all errors
  */
 RpcHandler.prototype._handleRequest = function() {
-    this.request.setEncoding('utf8');
+    this.httpRequest.setEncoding('utf8');
     var rpcHandler = this;
-    this._handleBodyRequest(function(json) {
+    this._handleRequestBody(function(json, err) {
+        if (err) {
+            rpcHandler._parseError();
+            return;
+        }
+
         rpcHandler.json = json;
-        if ("id" in json)
-            rpcHandler.id = json.id;
+
+        if ('id' in json) {
+            if (typeof json.id == 'string' ||
+                typeof json.id == 'number') {
+                rpcHandler.id = json.id;
+            } else {
+                rpcHandler._invalidRequest();
+                return;
+            }
+        }
+
+        if ('jsonrpc' in json) {
+            if (json.jsonrpc != '2.0')
+                rpcHandler._invalidRequest();
+
+            rpcHandler.version = 2;
+        } else {
+            rpcHandler.version = 1;
+        }
         
         rpcHandler._run();
     });
@@ -200,11 +276,15 @@ RpcHandler.prototype._handleRequest = function() {
 RpcHandler.prototype._handleRequestBody = function (callback) {
     var content = '';
 
-    this.request.addListener('data', function(chunk){
+    this.httpRequest.addListener('data', function(chunk){
         content += chunk;
     });
 
-    this.request.addListener('end', function(){
-        callback(JSON.parse(content));
+    this.httpRequest.addListener('end', function(){
+        try {
+            callback(JSON.parse(content), null);
+        } catch(e) {
+            callback(null, e);
+        }
     });
 }
