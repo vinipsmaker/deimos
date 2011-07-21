@@ -36,6 +36,7 @@
  * JSON-RPC 1.0 and 2.0
  * http://groups.google.com/group/json-rpc/web/json-1-0-spec
  * http://groups.google.com/group/json-rpc/web/json-rpc-2-0
+ * http://groups.google.com/group/json-rpc/web/json-rpc-over-http
  * 
  * Manages RPC-JSON messages
  * 
