@@ -244,7 +244,6 @@ RpcHandler.prototype._handleRequest = function() {
             return;
         }
 
-        rpcHandler.json = object;
         var arrayObject;
 
         if (isArray(object)) {
