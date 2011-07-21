@@ -265,7 +265,7 @@ RpcHandler.prototype._handleRequest = function() {
             rpcHandler.version = 1;
         }
         
-        rpcHandler._run(this.json);
+        rpcHandler._run(json);
     });
 }
 
