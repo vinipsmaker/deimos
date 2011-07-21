@@ -196,26 +196,27 @@ RpcHandler.prototype._invalidRequest = function() {
 }
 
 /**
- * RpcHandler._run() -> undefined
+ * RpcHandler._run(json) -> undefined
+ * - json (Object): JSON object
  * 
  * Checks if input is correct and passes the params to an actual RPC method
  **/
-RpcHandler.prototype._run = function() {
-    if (!this.json.method)
+RpcHandler.prototype._run = function(json) {
+    if (!json.method)
         this._invalidRequest();
 
     if (!this.methods)
         this.methodNotFound();
 
-    if (!(this.json.method in this.methods) ||
-        typeof this.methods[this.json.method] != 'function')
+    if (!(json.method in this.methods) ||
+        typeof this.methods[json.method] != 'function')
         this.methodNotFound();
 
     var params = null;
 
-    if ('params' in this.json) {
-        if (typeof this.json.params == 'object') {
-            params = this.json.params;
+    if ('params' in json) {
+        if (typeof json.params == 'object') {
+            params = json.params;
         } else {
             this._invalidRequest();
             return;
@@ -223,7 +224,7 @@ RpcHandler.prototype._run = function() {
     }
 
     try {
-        this.methods[this.json.method](this, this.json.params);
+        this.methods[json.method](this, json.params);
     } catch(e) {
         this.internalError(this.debug ? e.message : null);
     }
@@ -264,7 +265,7 @@ RpcHandler.prototype._handleRequest = function() {
             rpcHandler.version = 1;
         }
         
-        rpcHandler._run();
+        rpcHandler._run(this.json);
     });
 }
 
