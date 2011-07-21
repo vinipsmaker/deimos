@@ -238,34 +238,53 @@ RpcHandler.prototype._run = function(json) {
 RpcHandler.prototype._handleRequest = function() {
     this.httpRequest.setEncoding('utf8');
     var rpcHandler = this;
-    this._handleRequestBody(function(json, err) {
+    this._handleRequestBody(function(object, err) {
         if (err) {
             rpcHandler._parseError();
             return;
         }
 
-        rpcHandler.json = json;
+        rpcHandler.json = object;
+        var arrayObject;
 
-        if ('id' in json) {
-            if (typeof json.id == 'string' ||
-                typeof json.id == 'number') {
-                rpcHandler.id = json.id;
-            } else {
+        if (isArray(object)) {
+            if (object.length == 0) {
+                rpcHandler.batch = false;
                 rpcHandler._invalidRequest();
                 return;
             }
-        }
 
-        if ('jsonrpc' in json) {
-            if (json.jsonrpc != '2.0')
-                rpcHandler._invalidRequest();
-
-            rpcHandler.version = 2;
+            rpcHandler.batch = true;
+            arrayObject = object;
         } else {
-            rpcHandler.version = 1;
+            rpcHandler.batch = false;
+            arrayObject = [object];
         }
-        
-        rpcHandler._run(json);
+
+        rpcHandler.requestsNumber = arrayObject.length;
+
+        arrayObject.forEach(function(json) {
+            if ('id' in json) {
+                if (typeof json.id == 'string' ||
+                    typeof json.id == 'number') {
+                    rpcHandler.id = json.id;
+                } else {
+                    rpcHandler._invalidRequest();
+                    return;
+                }
+            }
+
+            if ('jsonrpc' in json) {
+                if (json.jsonrpc != '2.0')
+                    rpcHandler._invalidRequest();
+
+                rpcHandler.version = 2;
+            } else {
+                rpcHandler.version = 1;
+            }
+
+            rpcHandler._run(json);
+        }
     });
 }
 
