@@ -73,6 +73,8 @@
  * 
  */
 
+var isArray = require('./utils.js').isArray;
+
 /**
  * new RpcHandler(request, response, methods, debug)
  * - request (Object): http.ServerRequest object
