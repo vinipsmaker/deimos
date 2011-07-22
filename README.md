@@ -1,7 +1,7 @@
-node-jsonrpc2
+deimos
 ============
 
-This module makes it easy to process and respond to JSON-RPC (v1.0 and v2.0) messages.
+This module makes it easy to process and respond to JSON-RPC (1.0 and 2.0) messages.
 
 JSON-RPC is an extremely simple format to communicate between the client (for example browser) and the host (server).
 It's an easy way to run functions server side by providing the server the function name that needs to be executed and the params alongside with it.
@@ -11,9 +11,12 @@ Illustrating pseudocode
 
     --> RUN FUNCTION "add_comment" WITH "user", "this is cool!"
     <-- RETURN add_comment("user", "this is cool")
-    
 
-You can find the full JSON-RPC specification [here](http://json-rpc.org/wiki/specification "RPC 1.0 Specification").
+
+The full JSON-RPC specification links:
+http://groups.google.com/group/json-rpc/web/json-1-0-spec
+http://groups.google.com/group/json-rpc/web/json-rpc-2-0
+http://groups.google.com/group/json-rpc/web/json-rpc-over-http
 
 
 Installation
@@ -21,23 +24,23 @@ Installation
 
 You can install this package through npm
 
-    npm install jsonrpc
-    
+    npm install deimos
+
 After this you can require the RpcHandler with
 
-    var rpc = require("jsonrpc2").RpcHandler;
+    var rpc = require('deimos').RpcHandler;
 
 
 Server side node.JS
 -------------------
 
-Main handler for the RPC request is jsonrpc.RpcHandler - this is a constructor function that handles the RPC request all the way to the final output. You don't have to call response.end() for example, this is done by the handler object.
+Main handler for the RPC request is deimos.RpcHandler - this is a constructor function that handles the RPC request all the way to the final output. You don't have to call response.end() for example, this is done by the handler object.
 
-    var RpcHandler = require("jsonrpc2").RpcHandler;
+    var RpcHandler = require('deimos').RpcHandler;
     new RpcHandler(request, response, rpcMethods, debug=false);
-    
+
 RPChandler construtor takes the following parameters
-    
+
  - request: http.ServerRequest object
  - response: http.ServerResponse object
  - rpcMethods: object that holds all the available methods
@@ -58,23 +61,30 @@ Server accepts method calls for "check" - this method checks if the two used par
 
     // start server
     http.createServer(function (request, response) {
-        if(request.method == "POST") {
+        if(request.method == 'POST') {
             // if POST request, handle RPC
             new RpcHandler(request, response, rpcMethods, true);
         } else {
             // if GET request response with greeting
+            response.writeHead(200, {"Content-Type": "text/plain"});
             response.end("Hello world!");
         }
     }).listen(80);
 
     // Available RPC methods
     rpcMethods = {
-        // NB! private method names are preceeded with an underscore
-        check: function(rpc, params) {
-            if (params[0] != params[1])
-                rpc.error("Params doesn't match!");
-            else
-                rpc.response("Params are OK!");
+        check: function(rpc, args) {
+            if (!isArray(args) ||
+                args.length != 2) {
+                rpc.invalidParams();
+                return;
+            }
+
+            if (args[0] == args[1]) {
+                rpc.response('Params are OK!');
+            } else {
+                rpc.response('Params doesn\'t match!');
+            }
         }
     }
 
@@ -95,7 +105,7 @@ If `id` value is not set, then server takes this as a notification and return no
 Parameter values are given to the RPC method as an array:
 
     "params": ["val1", "val2", "val3"]
-    
+
 Will be used as
 
     method = function(rpc, params){
