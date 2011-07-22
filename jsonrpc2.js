@@ -120,7 +120,9 @@ RpcHandler.prototype.error = function(errorCode, errorMessage,
     data = typeof(data) != 'undefined' ? data : null;
     forceOutput = !!forceOutput;
 
-    this.httpResponse.writeHead(httpStatus, {"Content-Type": "application/json"});
+    if (!this.batch)
+        this.httpResponse.writeHead(httpStatus,
+                                    {"Content-Type": "application/json"});
 
     if (forceOutput ||
         ('id' in this && this.id !== null)) {
@@ -141,10 +143,22 @@ RpcHandler.prototype.error = function(errorCode, errorMessage,
             resObj.error = JSON.stringify(errObj);
         }
 
-        this.httpResponse.write(JSON.stringify(resObj));
+        if (this.batch)
+            this.responseObject.push(resObj);
+        else
+            this.httpResponse.write(JSON.stringify(resObj));
     }
 
-    this.httpResponse.end();
+    if (this.batch) {
+        this.requestsNumber--;
+        if (this.requestsNumber == 0) {
+            this.httpResponse.writeHead(200,
+                                        {"Content-Type": "application/json"});
+            this.httpResponse.end(JSON.stringify(this.responseObject));
+        }
+    } else {
+        this.httpResponse.end();
+    }
 }
 
 RpcHandler.prototype.methodNotFound = function() {
@@ -168,7 +182,9 @@ RpcHandler.prototype.internalError = function(data) {
  * Returns true if a message was sent and false if blank was sent
  */
 RpcHandler.prototype.response = function(result) {
-    this.httpResponse.writeHead(200, {"Content-Type": "application/json"});
+    if (!this.batch)
+        this.httpResponse.writeHead(200,
+                                    {"Content-Type": "application/json"});
 
     if ('id' in this && this.id !== null) {
         var resObj = {
@@ -179,10 +195,22 @@ RpcHandler.prototype.response = function(result) {
         if (this.version == 2)
             resObj.jsonrpc = '2.0';
 
-        this.httpResponse.write(JSON.stringify(resObj));
+        if (this.batch)
+            this.responseObject.push(resObj);
+        else
+            this.httpResponse.write(JSON.stringify(resObj));
     }
 
-    this.httpResponse.end();
+    if (this.batch) {
+        this.requestsNumber--;
+        if (this.requestsNumber == 0) {
+            this.httpResponse.writeHead(200,
+                                        {"Content-Type": "application/json"});
+            this.httpResponse.end(JSON.stringify(this.responseObject));
+        }
+    } else {
+        this.httpResponse.end();
+    }
 }
 
 //////////// PRIVATE METHODS ////////////
@@ -254,6 +282,7 @@ RpcHandler.prototype._handleRequest = function() {
             }
 
             rpcHandler.batch = true;
+            rpcHandler.responseObject = [];
             arrayObject = object;
         } else {
             rpcHandler.batch = false;
@@ -271,11 +300,15 @@ RpcHandler.prototype._handleRequest = function() {
                     rpcHandler._invalidRequest();
                     return;
                 }
+            } else {
+                delete rpcHandler.id;
             }
 
             if ('jsonrpc' in json) {
-                if (json.jsonrpc != '2.0')
+                if (json.jsonrpc != '2.0') {
                     rpcHandler._invalidRequest();
+                    return;
+                }
 
                 rpcHandler.version = 2;
             } else {
@@ -283,7 +316,7 @@ RpcHandler.prototype._handleRequest = function() {
             }
 
             rpcHandler._run(json);
-        }
+        });
     });
 }
 
