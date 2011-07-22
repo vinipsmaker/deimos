@@ -1,6 +1,16 @@
 {
-    "name"       : "jsonrpc2",
-    "version"    : "0.1.0",
-    "description": "A JSON-RPC 2.0 & 1.0 implementation for rpc-handlers (just server side).",
-    "main"       : "./jsonrpc2"
+  "author": "Vinícius dos Santos Oliveira (http://vinipsmaker.wordpress.com/)",
+  "name": "Deimos",
+  "description": "A JSON-RPC 2.0 and 1.0 implementation",
+  "version": "0.2.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/vinipsmaker/node-jsonrpc2.git"
+  },
+  "main": "jsonrpc2.js",
+  "engines": {
+    "node": "~v0.4.10"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }
