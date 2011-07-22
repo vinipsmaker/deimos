@@ -2,14 +2,14 @@
   "author": "Vinícius dos Santos Oliveira (http://vinipsmaker.wordpress.com/)",
   "name": "deimos",
   "description": "A JSON-RPC 2.0 and 1.0 implementation",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "repository": {
     "type": "git",
     "url": "git://github.com/vinipsmaker/node-jsonrpc2.git"
   },
-  "main": "jsonrpc2.js",
+  "main": "deimos.js",
   "engines": {
-    "node": ">= 0.4.0"
+    "node": ">= 0.4.0 < 0.5.0"
   },
   "dependencies": {},
   "devDependencies": {}
