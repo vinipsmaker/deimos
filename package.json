@@ -1,6 +1,6 @@
 {
   "author": "Vinícius dos Santos Oliveira (http://vinipsmaker.wordpress.com/)",
-  "name": "Deimos",
+  "name": "deimos",
   "description": "A JSON-RPC 2.0 and 1.0 implementation",
   "version": "0.2.0",
   "repository": {
