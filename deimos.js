@@ -132,7 +132,7 @@ RpcHandler.prototype.error = function(errorCode, errorMessage,
 
     if (!this.batch)
         this.httpResponse.writeHead(httpStatus,
-                                    {"Content-Type": "application/json"});
+                                    {"Content-Type": "application/json-rpc"});
 
     if (forceOutput ||
         ('id' in this && this.id !== null)) {
@@ -163,7 +163,7 @@ RpcHandler.prototype.error = function(errorCode, errorMessage,
         this.requestsNumber--;
         if (this.requestsNumber == 0) {
             this.httpResponse.writeHead(200,
-                                        {"Content-Type": "application/json"});
+                                        {"Content-Type": "application/json-rpc"});
             this.httpResponse.end(JSON.stringify(this.responseObject));
         }
     } else {
@@ -208,7 +208,7 @@ RpcHandler.prototype.internalError = function(data) {
 RpcHandler.prototype.response = function(result) {
     if (!this.batch)
         this.httpResponse.writeHead(200,
-                                    {"Content-Type": "application/json"});
+                                    {"Content-Type": "application/json-rpc"});
 
     if ('id' in this && this.id !== null) {
         var resObj = {
@@ -229,7 +229,7 @@ RpcHandler.prototype.response = function(result) {
         this.requestsNumber--;
         if (this.requestsNumber == 0) {
             this.httpResponse.writeHead(200,
-                                        {"Content-Type": "application/json"});
+                                        {"Content-Type": "application/json-rpc"});
             this.httpResponse.end(JSON.stringify(this.responseObject));
         }
     } else {
