@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/vinipsmaker/deimos.png)](http://travis-ci.org/vinipsmaker/deimos)
 deimos
 ============
 
